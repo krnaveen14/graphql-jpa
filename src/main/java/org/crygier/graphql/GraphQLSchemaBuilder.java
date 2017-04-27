@@ -24,7 +24,7 @@ public class GraphQLSchemaBuilder {
     public static final String PAGINATION_REQUEST_PARAM_NAME = "paginationRequest";
     private static final Logger log = LoggerFactory.getLogger(GraphQLSchemaBuilder.class);
 
-    private EntityManager entityManager;
+    protected EntityManager entityManager;
 
     public GraphQLSchemaBuilder(EntityManager entityManager) {
         this.entityManager = entityManager;
@@ -37,7 +37,7 @@ public class GraphQLSchemaBuilder {
         return schemaBuilder.build();
     }
 
-    private GraphQLObjectType getQueryType() {
+    protected GraphQLObjectType getQueryType() {
         GraphQLObjectType.Builder queryType = GraphQLObjectType.newObject().name("QueryType_JPA").description("All encompassing schema for this JPA environment");
         queryType.fields(entityManager.getMetamodel().getEntities().stream().filter(this::isNotIgnored).map(this::getQueryFieldDefinition).collect(Collectors.toList()));
         queryType.fields(entityManager.getMetamodel().getEntities().stream().filter(this::isNotIgnored).map(this::getQueryFieldPageableDefinition).collect(Collectors.toList()));
@@ -45,7 +45,7 @@ public class GraphQLSchemaBuilder {
         return queryType.build();
     }
 
-    private GraphQLFieldDefinition getQueryFieldDefinition(EntityType<?> entityType) {
+    protected GraphQLFieldDefinition getQueryFieldDefinition(EntityType<?> entityType) {
         return GraphQLFieldDefinition.newFieldDefinition()
                 .name(entityType.getName())
                 .description(getSchemaDocumentation( entityType.getJavaType()))
@@ -55,7 +55,7 @@ public class GraphQLSchemaBuilder {
                 .build();
     }
 
-    private GraphQLFieldDefinition getQueryFieldPageableDefinition(EntityType<?> entityType) {
+    protected GraphQLFieldDefinition getQueryFieldPageableDefinition(EntityType<?> entityType) {
         GraphQLObjectType pageType = GraphQLObjectType.newObject()
                 .name(entityType.getName() + "Connection")
                 .description("'Connection' response wrapper object for " + entityType.getName() + ".  When pagination or aggregation is requested, this object will be returned with metadata about the query.")
@@ -73,7 +73,7 @@ public class GraphQLSchemaBuilder {
                 .build();
     }
 
-    private GraphQLArgument getArgument(Attribute attribute) {
+    protected GraphQLArgument getArgument(Attribute attribute) {
         GraphQLType type = getAttributeType(attribute);
 
         if (type instanceof GraphQLInputType) {
@@ -86,7 +86,7 @@ public class GraphQLSchemaBuilder {
         throw new IllegalArgumentException("Attribute " + attribute + " cannot be mapped as an Input Argument");
     }
 
-    private GraphQLObjectType getObjectType(EntityType<?> entityType) {
+    protected GraphQLObjectType getObjectType(EntityType<?> entityType) {
         return GraphQLObjectType.newObject()
                 .name(entityType.getName())
                 .description(getSchemaDocumentation( entityType.getJavaType()))
@@ -94,7 +94,7 @@ public class GraphQLSchemaBuilder {
                 .build();
     }
 
-    private GraphQLFieldDefinition getObjectField(Attribute attribute) {
+    protected GraphQLFieldDefinition getObjectField(Attribute attribute) {
         GraphQLType type = getAttributeType(attribute);
 
         if (type instanceof GraphQLOutputType) {
@@ -122,11 +122,11 @@ public class GraphQLSchemaBuilder {
         throw new IllegalArgumentException("Attribute " + attribute + " cannot be mapped as an Output Argument");
     }
 
-    private Stream<Attribute> findBasicAttributes(Collection<Attribute> attributes) {
+    protected Stream<Attribute> findBasicAttributes(Collection<Attribute> attributes) {
         return attributes.stream().filter(it -> it.getPersistentAttributeType() == Attribute.PersistentAttributeType.BASIC);
     }
 
-    private GraphQLType getAttributeType(Attribute attribute) {
+    protected GraphQLType getAttributeType(Attribute attribute) {
         if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.BASIC) {
             if (String.class.isAssignableFrom(attribute.getJavaType()))
                 return Scalars.GraphQLString;
@@ -172,12 +172,12 @@ public class GraphQLSchemaBuilder {
                 "Attribute could not be mapped to GraphQL: field '" + declaringMember + "' of entity class '"+ declaringType +"'");
     }
 
-    private boolean isValidInput(Attribute attribute) {
+    protected boolean isValidInput(Attribute attribute) {
         return attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.BASIC ||
                 attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.ELEMENT_COLLECTION;
     }
 
-    private String getSchemaDocumentation(Member member) {
+    protected String getSchemaDocumentation(Member member) {
         if (member instanceof AnnotatedElement) {
             return getSchemaDocumentation((AnnotatedElement) member);
         }
@@ -185,7 +185,7 @@ public class GraphQLSchemaBuilder {
         return null;
     }
 
-    private String getSchemaDocumentation(AnnotatedElement annotatedElement) {
+    protected String getSchemaDocumentation(AnnotatedElement annotatedElement) {
         if (annotatedElement != null) {
             SchemaDocumentation schemaDocumentation = annotatedElement.getAnnotation(SchemaDocumentation.class);
             return schemaDocumentation != null ? schemaDocumentation.value() : null;
@@ -194,19 +194,19 @@ public class GraphQLSchemaBuilder {
         return null;
     }
 
-    private boolean isNotIgnored(Attribute attribute) {
+    protected boolean isNotIgnored(Attribute attribute) {
         return isNotIgnored(attribute.getJavaMember()) && isNotIgnored(attribute.getJavaType());
     }
 
-    private boolean isNotIgnored(EntityType entityType) {
+    protected boolean isNotIgnored(EntityType entityType) {
         return isNotIgnored(entityType.getJavaType());
     }
 
-    private boolean isNotIgnored(Member member) {
+    protected boolean isNotIgnored(Member member) {
         return member instanceof AnnotatedElement && isNotIgnored((AnnotatedElement) member);
     }
 
-    private boolean isNotIgnored(AnnotatedElement annotatedElement) {
+    protected boolean isNotIgnored(AnnotatedElement annotatedElement) {
         if (annotatedElement != null) {
             GraphQLIgnore schemaDocumentation = annotatedElement.getAnnotation(GraphQLIgnore.class);
             return schemaDocumentation == null;
@@ -215,7 +215,7 @@ public class GraphQLSchemaBuilder {
         return false;
     }
 
-    private GraphQLType getTypeFromJavaType(Class clazz) {
+    protected GraphQLType getTypeFromJavaType(Class clazz) {
         if (clazz.isEnum()) {
             GraphQLEnumType.Builder enumBuilder = GraphQLEnumType.newEnum().name(clazz.getSimpleName());
             int ordinal = 0;
@@ -236,7 +236,7 @@ public class GraphQLSchemaBuilder {
      *
      * @param type
      */
-    private void setIdentityCoercing(GraphQLType type) {
+    protected void setIdentityCoercing(GraphQLType type) {
         try {
             Field coercing = type.getClass().getDeclaredField("coercing");
             coercing.setAccessible(true);
@@ -246,7 +246,7 @@ public class GraphQLSchemaBuilder {
         }
     }
 
-    private static final GraphQLArgument paginationArgument =
+    protected static final GraphQLArgument paginationArgument =
             GraphQLArgument.newArgument()
                     .name(PAGINATION_REQUEST_PARAM_NAME)
                     .type(GraphQLInputObjectType.newInputObject()
@@ -257,7 +257,7 @@ public class GraphQLSchemaBuilder {
                                     .build()
                     ).build();
 
-    private static final GraphQLEnumType orderByDirectionEnum =
+    protected static final GraphQLEnumType orderByDirectionEnum =
             GraphQLEnumType.newEnum()
                     .name("OrderByDirection")
                     .description("Describes the direction (Ascending / Descending) to sort a field.")

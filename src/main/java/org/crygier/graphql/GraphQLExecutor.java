@@ -12,8 +12,8 @@ import java.util.Map;
 public class GraphQLExecutor {
 
     @Resource
-    private EntityManager entityManager;
-    private GraphQL graphQL;
+    protected EntityManager entityManager;
+    protected GraphQL graphQL;
 
     protected GraphQLExecutor() {}
     public GraphQLExecutor(EntityManager entityManager) {
